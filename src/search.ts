@@ -17,7 +17,7 @@ export function initializeIndex(loadedEpisodes: Episode[]): void {
   // Create a document index
   index = new FlexSearch.Document<Episode, string[]>({
     document: {
-      id: "guest",
+      id: "id",
       index: ["guest", "content"],
       store: ["guest", "content"],
     },
@@ -59,14 +59,12 @@ export async function searchTranscripts(
 
     for (const item of fieldResult.result) {
       // Handle both enriched and non-enriched results
-      const guest = typeof item === "string" ? item : (item as any).id || (item as any).doc?.guest;
-
-      if (!guest || seenGuests.has(guest)) continue;
-      seenGuests.add(guest);
-
-      // Find the full episode
-      const episode = episodes.find((e) => e.guest === guest);
+      const id = typeof item === "string" ? item : (item as any).id;
+      const episode = episodes.find((e) => e.id === id);
       if (!episode) continue;
+      const guest = episode.guest;
+      if (seenGuests.has(guest)) continue;
+      seenGuests.add(guest);
 
       const snippet = extractSnippet(episode.content, searchTerms, 600);
 
@@ -125,5 +123,7 @@ export function getEpisode(guest: string): Episode | null {
 }
 
 export function listEpisodes(): string[] {
-  return episodes.map((e) => e.guest).sort();
+  return [...episodes]
+    .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
+    .map((e) => `${e.guest}${e.title ? ` — ${e.title}` : ""}${e.date ? ` (${e.date.slice(0, 10)})` : ""}`);
 }
